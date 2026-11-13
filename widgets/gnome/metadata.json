@@ -1,0 +1,6 @@
+{
+    "uuid": "miti@miti.org",
+    "name": "Nepali Date",
+    "description": "Today's Bikram Sambat date in the top bar, with a month calendar, tithi and events. Needs the miti CLI.",
+    "shell-version": ["45", "46", "47", "48", "49", "50", "51"]
+}

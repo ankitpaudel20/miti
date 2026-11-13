@@ -1,0 +1,76 @@
+name: build
+
+on:
+  # push:
+  #   branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # Everything in test.yml (all OSes, all widgets) must pass before anything is built.
+  test:
+    uses: ./.github/workflows/test.yml
+
+  build:
+    name: ${{ matrix.name }}
+    needs: test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, name: linux-x86_64 }
+          - { os: macos-latest, name: macos-arm64 }
+          - { os: windows-latest, name: windows-x86_64 }
+    defaults:
+      run:
+        shell: bash
+    env:
+      # Appended to every artifact name, until real versioning exists.
+      PKG: miti-${{ matrix.name }}-${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # On Linux this one binary also carries the KDE and GNOME widgets (`miti install`).
+      - name: Build CLI
+        run: |
+          cargo build --release
+          mkdir dist
+          cp target/release/miti${{ runner.os == 'Windows' && '.exe' || '' }} dist/
+          # Install and uninstall scripts travel with every archive.
+          cp ${{ runner.os == 'Windows' && 'scripts/install.ps1 scripts/uninstall.ps1' || 'scripts/install.sh scripts/uninstall.sh' }} dist/
+
+      # Window app (Tauri). It is only copied into the archive: the install scripts do not touch it.
+      - name: Build window app
+        run: |
+          if [ "$RUNNER_OS" = Linux ]; then
+            sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev
+          fi
+          cargo build --release -p miti-gui
+          cp target/release/miti-gui${{ runner.os == 'Windows' && '.exe' || '' }} dist/
+
+      - name: Build menu bar app (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          swift build -c release --package-path widgets/macos/MitiBar
+          cp widgets/macos/MitiBar/.build/release/MitiBar dist/
+
+      - name: Build tray app (Windows)
+        if: runner.os == 'Windows'
+        run: dotnet publish widgets/windows/MitiTray -c Release -o dist
+
+      # Artifacts are zipped without file modes; a tarball keeps the executable bit.
+      - name: Pack (unix)
+        if: runner.os != 'Windows'
+        run: |
+          tar -czf "$PKG.tar.gz" -C dist .
+          rm -r dist && mkdir dist
+          mv "$PKG.tar.gz" dist/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PKG }}
+          path: dist/
+          if-no-files-found: error

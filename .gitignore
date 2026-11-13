@@ -1,0 +1,6 @@
+/target
+.build/
+bin/
+obj/
+/dist
+/gui/gen

@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <!-- Run on whatever newer .NET runtime is installed. -->
+    <RollForward>LatestMajor</RollForward>
+    <UseWPF>true</UseWPF>
+    <!-- Windows Forms only for NotifyIcon, the tray icon WPF lacks. -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <!-- Off: with both UI stacks on, implicit usings make Application, Button, Color... ambiguous. -->
+    <ImplicitUsings>disable</ImplicitUsings>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+  </PropertyGroup>
+
+</Project>

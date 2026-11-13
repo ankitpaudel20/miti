@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="ne">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Miti</title>
+<style>
+  :root {
+    --bg: #fafafa; --fg: #1f2023; --dim: #6b6e76; --line: #e2e3e6; --red: #d6303a; --accent: #4a5be0;
+    --wash: rgba(0, 0, 0, .06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #2b2d31; --fg: #e6e6e6; --dim: #9a9ca3; --line: #3d3f45; --red: #ff6b70; --accent: #7b87ff;
+            --wash: rgba(255, 255, 255, .08); }
+  }
+  * { box-sizing: border-box; }
+  /* The window is a fixed 440x680. The grid always has 6 week rows and the detail pane takes
+     what is left, so nothing moves or scrolls when you change month or day. */
+  body { margin: 0; padding: 12px; height: 100vh; display: flex; flex-direction: column;
+         background: var(--bg); color: var(--fg); font: 15px system-ui, sans-serif; user-select: none; }
+  button, input, select { font: inherit; color: inherit; }
+  button { background: none; border: 2px solid transparent; border-radius: 8px; cursor: pointer; }
+  button:hover { background: var(--wash); }
+  header { display: flex; align-items: center; gap: 4px; height: 44px; }
+  header .title { flex: 1; text-align: center; }
+  .title b { font-size: 20px; display: block; line-height: 1.2; }
+  .title small, .dim { color: var(--dim); font-size: 12px; }
+  .nav { width: 36px; height: 36px; font-size: 20px; }
+  #today-btn { height: 30px; padding: 0 10px; font-size: 14px; border-color: var(--line); }
+  .grid { display: grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: 22px repeat(6, 46px);
+          gap: 2px; margin: 8px 0; }
+  .wd { text-align: center; color: var(--dim); font-size: 12px; padding-top: 4px; }
+  .day { padding: 2px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .day span { font-size: 18px; line-height: 1.1; }
+  .day small { color: var(--dim); font-size: 10px; }
+  .red span { color: var(--red); }
+  .today { border-color: var(--accent); }
+  .sel { background: var(--wash); }
+  #detail { flex: 1; min-height: 0; overflow-y: auto; border-top: 1px solid var(--line); padding-top: 8px; }
+  #detail h2 { margin: 0; font-size: 17px; }
+  #detail p { margin: 2px 0; font-size: 14px; }
+  #detail p.dim { font-size: 12px; }
+  #conv { display: flex; gap: 6px; margin-top: 8px; }
+  #conv input, #conv select { height: 32px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 0 8px; }
+  #conv input { flex: 1; min-width: 0; user-select: text; }
+  #conv button { height: 32px; padding: 0 12px; border-color: var(--line); }
+  #err { color: var(--red); height: 18px; font-size: 12px; margin-top: 2px; }
+</style>
+</head>
+<body>
+<header>
+  <button class="nav" id="prev" aria-label="Previous month">‹</button>
+  <div class="title"><b id="month"></b><small id="range"></small></div>
+  <button id="today-btn">आज</button>
+  <button class="nav" id="next" aria-label="Next month">›</button>
+</header>
+<div class="grid" id="grid"></div>
+<div id="detail"></div>
+<form id="conv">
+  <select id="kind" aria-label="Date type"><option value="bs">BS</option><option value="ad">AD</option></select>
+  <input id="text" placeholder="YYYY-MM-DD" aria-label="Date to convert" autocomplete="off">
+  <button>Go</button>
+</form>
+<div id="err"></div>
+
+<script>
+const { invoke } = window.__TAURI__.core;
+const $ = (id) => document.getElementById(id);
+const WEEKDAYS = ["आइत", "सोम", "मंगल", "बुध", "बिही", "शुक्र", "शनि"];
+const AD_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+let today = null; // `miti today -j`
+let shown = null; // `miti month Y-M`: the month on screen
+let sel = null;   // the day whose details are shown
+
+const get = async (cmd, args) => JSON.parse(await invoke(cmd, args));
+const el = (tag, cls, text) => Object.assign(document.createElement(tag), { className: cls || "", textContent: text ?? "" });
+const fail = (e) => { $("err").textContent = String(e); return false; };
+
+// Month arithmetic wraps the year. A month outside the table, or (strict) a day the month
+// does not have, leaves the view where it was.
+async function show(year, month, pick = 1, strict = false) {
+  const n = year * 12 + month - 1;
+  let next;
+  try {
+    next = await get("month", { year: Math.floor(n / 12), month: (n % 12) + 1 });
+  } catch (e) {
+    return fail(e);
+  }
+  const last = next.days.length;
+  if (strict && pick > last) return fail(`${next.month_en} ${next.year} has ${last} days`);
+  shown = next;
+  sel = shown.days[Math.min(pick, last) - 1];
+  $("err").textContent = "";
+  render();
+  return true;
+}
+
+function render() {
+  const [a, b] = [shown.days[0].ad, shown.days.at(-1).ad].map((s) => s.split("-"));
+  $("month").textContent = `${shown.month_np} ${shown.year_np}`;
+  $("range").textContent = `${shown.month_en} ${shown.year} · ${AD_MONTHS[a[1] - 1]}${a[0] === b[0] ? "" : " " + a[0]} – ${AD_MONTHS[b[1] - 1]} ${b[0]}`;
+
+  const grid = $("grid");
+  grid.replaceChildren(...WEEKDAYS.map((w) => el("div", "wd", w)));
+  for (let i = 0; i < shown.days[0].weekday; i++) grid.append(el("div"));
+  for (const d of shown.days) {
+    const btn = el("button", "day");
+    btn.append(el("span", "", d.day_np), el("small", "", String(+d.ad.slice(8))));
+    if (d.holiday || d.weekday === 6) btn.classList.add("red"); // Saturday is the weekend
+    if (d.bs === today?.bs) btn.classList.add("today");
+    if (d.bs === sel.bs) btn.classList.add("sel");
+    btn.onclick = () => { sel = d; render(); };
+    grid.append(btn);
+  }
+
+  const [y, m, dd] = sel.ad.split("-").map(Number);
+  const detail = $("detail");
+  detail.replaceChildren(
+    el("h2", "", `${sel.year_np} ${sel.month_np} ${sel.day_np}, ${sel.weekday_np}`),
+    el("p", "dim", `${sel.weekday_en}, ${dd} ${AD_MONTHS[m - 1]} ${y}  ·  ${sel.bs} BS`),
+    ...(sel.tithi ? [el("p", "", sel.tithi)] : []),
+    ...(sel.event_np ? [el("p", "", sel.event_np)] : []),
+    ...(sel.event_en ? [el("p", "dim", sel.event_en)] : []),
+  );
+  if (sel.holiday) detail.children[0].style.color = "var(--red)";
+}
+
+// Jump to the typed date; the detail pane then shows it in both calendars.
+$("conv").onsubmit = async (ev) => {
+  ev.preventDefault();
+  const m = $("text").value.trim().replace(/[\/.]/g, "-").match(/^(\d{1,4})-(\d{1,2})-(\d{1,2})$/); // 2026/11/13 works too
+  if (!m) return fail("Type a date as YYYY-MM-DD");
+  let [y, mo, d] = m.slice(1).map(Number);
+  if ($("kind").value === "ad") {
+    try {
+      ({ year: y, month: mo, day: d } = await get("ad2bs", { year: y, month: mo, day: d }));
+    } catch (e) {
+      return fail(e);
+    }
+  }
+  await show(y, mo, d, true);
+};
+
+$("prev").onclick = () => show(shown.year, shown.month - 1);
+$("next").onclick = () => show(shown.year, shown.month + 1);
+$("today-btn").onclick = () => show(today.year, today.month, today.day);
+
+// Poll the clock instead of one long timer: survives suspend and clock changes.
+// The BS date rolls over at Nepal midnight, and `today` already accounts for that.
+async function tick() {
+  let t;
+  try { t = await get("today"); } catch (e) { fail(e); return; }
+  if (t.bs === today?.bs) return;
+  const first = !today;
+  today = t;
+  if (first || (shown.year === t.year && shown.month === t.month)) await show(t.year, t.month, t.day);
+  else render(); // only the "today" ring moves
+}
+tick();
+setInterval(tick, 60000);
+</script>
+</body>
+</html>

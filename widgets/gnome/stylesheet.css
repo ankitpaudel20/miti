@@ -1,0 +1,15 @@
+.miti-box { min-width: 30em; spacing: 6px; }
+.miti-title { font-size: 1.4em; font-weight: bold; }
+.miti-heading { font-size: 1.15em; font-weight: bold; }
+.miti-dim { opacity: 0.7; }
+.miti-small { font-size: 0.8em; }
+.miti-red { color: #e5484d; }
+.miti-entry { padding: 4px 8px; border-radius: 6px; }
+.miti-nav { padding: 4px 10px; border-radius: 6px; }
+.miti-nav:hover { background-color: rgba(128, 128, 128, 0.25); }
+.miti-cell { padding: 2px 4px; border-radius: 6px; border: 2px solid transparent; }
+.miti-cell:hover { background-color: rgba(128, 128, 128, 0.2); }
+.miti-day { font-size: 1.4em; }
+.miti-selected { border-color: #5865f2; }
+.miti-today, .miti-today:hover { background-color: #5865f2; color: #ffffff; }
+.miti-today.miti-selected { border-color: #ffffff; }

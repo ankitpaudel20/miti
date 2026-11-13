@@ -1,0 +1,14 @@
+[package]
+name = "miti-gui"
+version = "0.1.0"
+edition = "2024"
+description = "Month calendar window for miti, built with Tauri"
+license = "MIT"
+publish = false
+
+[build-dependencies]
+tauri-build = "2"
+
+[dependencies]
+miti = { path = ".." } # the library only; the CLI and its daemon code are not linked in
+tauri = "2"

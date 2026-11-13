@@ -1,0 +1,16 @@
+[package]
+name = "miti"
+version = "0.1.0"
+edition = "2024"
+description = "Nepali (Bikram Sambat) calendar: library, CLI and date daemon"
+license = "MIT"
+
+[workspace]
+members = ["gui"]
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

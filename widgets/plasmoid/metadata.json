@@ -1,0 +1,13 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Id": "org.miti.widget",
+        "Name": "Nepali Date",
+        "Description": "Today's Bikram Sambat date, tithi and events",
+        "Icon": "view-calendar",
+        "Category": "Date and Time",
+        "Version": "0.1.0",
+        "License": "MIT"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}
