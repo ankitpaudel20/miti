@@ -1,8 +1,6 @@
 name: test
 
 on:
-  push:
-    branches: [main, master]
   pull_request:
   workflow_dispatch:
   workflow_call: # build.yml runs this first
@@ -57,8 +55,8 @@ jobs:
       - name: KDE plasmoid
         run: |
           python3 -m json.tool widgets/plasmoid/metadata.json >/dev/null
-          # org.kde.* modules are not installed here, so skip import and unqualified-id checks.
-          /usr/lib/qt6/bin/qmllint --import disable --unqualified disable widgets/plasmoid/contents/ui/main.qml
+          # Parse only. Kirigami and Plasma are not installed here, so qmllint cannot resolve types.
+          /usr/lib/qt6/bin/qmlformat widgets/plasmoid/contents/ui/main.qml >/dev/null
       - name: GNOME extension
         run: |
           python3 -m json.tool widgets/gnome/metadata.json >/dev/null
@@ -75,6 +73,7 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2 # compiled Tauri dependencies; keyed on Cargo.lock
       - name: WebKitGTK (Linux)
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev

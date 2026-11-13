@@ -1,8 +1,8 @@
 name: build
 
 on:
-  # push:
-  #   branches: [main, master]
+  push:
+    branches: [main, master]
   workflow_dispatch:
 
 permissions:
@@ -32,6 +32,7 @@ jobs:
       PKG: miti-${{ matrix.name }}-${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2 # compiled Tauri dependencies; keyed on Cargo.lock
 
       # On Linux this one binary also carries the KDE and GNOME widgets (`miti install`).
       - name: Build CLI
